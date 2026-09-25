@@ -1,0 +1,1232 @@
+<!doctype html>
+<html lang="vi">
+  <!--
+  THIỆP TRUNG THU — HƯỚNG DẪN CHỈNH SỬA NHANH
+
+  1. Màu sắc và font: tìm phần CSS :root.
+  2. Tiêu đề, nội dung mở đầu: tìm section có id="intro".
+  3. Danh sách lời chúc: tìm const wishes trong JavaScript.
+  4. Tên hiển thị và chữ ký: tìm const card.
+  5. Nhạc nền: tìm phần NHẠC NỀN; melody là giai điệu,
+     master.gain.value là âm lượng (hiện tại 0.33).
+
+  Sau khi sửa hoặc định dạng JavaScript, chạy:
+    python build-security.py
+  Lệnh này cập nhật CSP và gói ZIP triển khai. Không sửa hash CSP bằng tay.
+-->
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'sha256-8hgco8HN+uE//dG4Ukf5BG3D4D+y86ESo0wbve5CBwg='; script-src-attr 'none'; style-src 'unsafe-inline'; img-src data:; font-src 'none'; connect-src 'none'; media-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'"
+    />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <meta name="theme-color" content="#080c1b" />
+    <title>Một mùa trăng, một lời thương</title>
+    <style>
+      /* 1. MÀU SẮC, FONT VÀ THIẾT LẬP CHUNG */
+      :root {
+        color-scheme: dark;
+        --ink: #f7eedb;
+        --gold: #edce8e;
+        --muted: #aaa9b8;
+        --sans: "Segoe UI", Arial, sans-serif;
+        /* Times New Roman có đủ dấu tiếng Việt; tránh trộn glyph với Georgia. */
+        --serif: "Times New Roman", "Noto Serif", serif;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      [hidden] {
+        display: none !important;
+      }
+      body {
+        margin: 0;
+        background: #080c1b;
+        color: var(--ink);
+        font-family: var(--sans);
+        overflow: hidden;
+      }
+      button,
+      input,
+      textarea {
+        font: inherit;
+      }
+      button {
+        color: inherit;
+        cursor: pointer;
+      }
+      button:focus-visible,
+      a:focus-visible {
+        outline: 2px solid var(--gold);
+        outline-offset: 6px;
+      }
+      button:disabled {
+        cursor: default;
+      }
+      canvas {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+      .sky-glow {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background:
+          radial-gradient(ellipse at 50% 46%, #26304a66, transparent 55%),
+          linear-gradient(0deg, #12182799, transparent 38%);
+      }
+      .grain {
+        position: fixed;
+        inset: 0;
+        opacity: 0.035;
+        pointer-events: none;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.86' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Cpath fill='white' filter='url(%23n)' opacity='.65' d='M0 0h180v180H0z'/%3E%3C/svg%3E");
+      }
+
+      /* 2. THANH TRÊN CÙNG VÀ NÚT NHẠC */
+      header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        padding: 30px 42px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        z-index: 6;
+      }
+      .brand {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        font-size: 10px;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+      }
+      .brand svg {
+        width: 25px;
+        height: 25px;
+      }
+      .tools {
+        display: flex;
+        gap: 10px;
+      }
+      .icon-button {
+        width: 40px;
+        height: 40px;
+        border: 1px solid #eee0c526;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        background: #10162565;
+        backdrop-filter: blur(12px);
+        transition:
+          background 0.2s,
+          border-color 0.2s;
+      }
+      .icon-button:hover {
+        background: #eee0c518;
+        border-color: #edce8e80;
+      }
+      .icon-button svg {
+        width: 17px;
+        height: 17px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.4;
+      }
+      .icon-button[aria-pressed="true"] {
+        color: var(--gold);
+        border-color: #edce8e80;
+      }
+
+      /* 3. MÀN HÌNH MỞ ĐẦU */
+      main {
+        height: 100svh;
+        min-height: 530px;
+        position: relative;
+      }
+      .intro {
+        height: 100%;
+        display: flex;
+        align-items: center;
+        flex-direction: column;
+        justify-content: center;
+        padding: 80px 20px 55px;
+        position: relative;
+        z-index: 2;
+        transition:
+          opacity 0.8s,
+          transform 1.4s;
+        overflow: hidden;
+      }
+      .eyebrow {
+        font-size: 10px;
+        letter-spacing: 4px;
+        text-transform: uppercase;
+        color: var(--gold);
+        margin: 0 0 15px;
+      }
+      .intro h1 {
+        font-family: var(--serif);
+        font-weight: 400;
+        font-size: clamp(37px, 4.8vw, 65px);
+        line-height: 1.17;
+        text-align: center;
+        margin: 0;
+        letter-spacing: -1.5px;
+      }
+      .intro h1 em {
+        font-weight: 400;
+        color: var(--gold);
+      }
+      .subtitle {
+        font-size: 12px;
+        color: var(--muted);
+        line-height: 1.8;
+        text-align: center;
+        margin: 17px 0 0;
+        font-weight: 300;
+      }
+
+      /* 4. MẶT TRĂNG VÀ VÒNG TIẾN TRÌNH NHẤN GIỮ */
+      .moon-scene {
+        position: relative;
+        width: 340px;
+        height: 330px;
+        flex-shrink: 0;
+        display: grid;
+        place-items: center;
+        margin: 12px 0 0;
+      }
+      .orbit {
+        position: absolute;
+        inset: 28px 38px;
+        border: 1px solid #ddc39020;
+        border-radius: 50%;
+        transform: rotate(-23deg);
+      }
+      .orbit:after {
+        content: "";
+        position: absolute;
+        width: 5px;
+        height: 5px;
+        left: 28px;
+        top: 38px;
+        background: var(--gold);
+        border-radius: 50%;
+        box-shadow: 0 0 12px #f4d48c;
+      }
+      .orbit.second {
+        inset: 12px 56px;
+        transform: rotate(33deg);
+        border-color: #ddc39012;
+      }
+      .moon-button {
+        width: 205px;
+        height: 205px;
+        border: none;
+        padding: 0;
+        background: transparent;
+        border-radius: 50%;
+        position: relative;
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-tap-highlight-color: transparent;
+        isolation: isolate;
+      }
+      .moon-button:before {
+        content: "";
+        position: absolute;
+        inset: -50px;
+        border-radius: 50%;
+        background: radial-gradient(circle, #eccc8a18, transparent 70%);
+        animation: breathe 5s infinite;
+        z-index: -1;
+      }
+      .moon-button svg.moon {
+        width: 100%;
+        height: 100%;
+        filter: drop-shadow(0 0 21px #efcf8055);
+        transition:
+          filter 0.3s,
+          transform 0.3s;
+      }
+      .moon-button:hover svg.moon,
+      .moon-button.holding svg.moon {
+        filter: drop-shadow(0 0 35px #efcf8099);
+        transform: scale(1.025);
+      }
+      .progress {
+        position: absolute;
+        inset: -12px;
+        width: calc(100% + 24px);
+        height: calc(100% + 24px);
+        transform: rotate(-90deg);
+        overflow: visible;
+      }
+      .progress circle {
+        fill: none;
+        stroke: var(--gold);
+        stroke-width: 1.1;
+        stroke-dasharray: 660;
+        stroke-dashoffset: 660;
+        filter: drop-shadow(0 0 4px #edce8e);
+      }
+
+      /* 5. THỎ, CÀNH LÁ VÀ ĐÈN LỒNG */
+      .rabbit {
+        position: absolute;
+        width: 92px;
+        height: 110px;
+        bottom: 8px;
+        left: 77px;
+        transform: rotate(-9deg);
+        filter: drop-shadow(0 9px 10px #0006);
+        pointer-events: none;
+      }
+      .sprig {
+        position: absolute;
+        width: 155px;
+        bottom: 15px;
+        right: 10px;
+        transform: rotate(-8deg);
+        opacity: 0.75;
+        pointer-events: none;
+      }
+      .lantern {
+        position: absolute;
+        pointer-events: none;
+        animation: sway 7s ease-in-out infinite;
+        transform-origin: top center;
+      }
+      .lantern.one {
+        width: 48px;
+        height: 110px;
+        top: 32px;
+        right: 13px;
+      }
+      .lantern.two {
+        width: 30px;
+        height: 80px;
+        left: 7px;
+        top: 100px;
+        opacity: 0.55;
+        animation-delay: -3s;
+      }
+      .hold-label {
+        font-size: 11px;
+        letter-spacing: 0.3px;
+        color: #d9cbae;
+        text-align: center;
+        margin: 6px 0 0;
+      }
+      .hold-label small {
+        display: block;
+        font-size: 10px;
+        margin-top: 9px;
+        color: #777f96;
+        letter-spacing: 0.2px;
+      }
+      .hold-dot {
+        display: inline-block;
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: var(--gold);
+        margin: 0 8px 2px 0;
+        box-shadow: 0 0 8px #edce8e77;
+      }
+
+      /* 6. CHÂN TRANG VÀ MÂY NỀN */
+      footer {
+        position: fixed;
+        bottom: 23px;
+        left: 0;
+        right: 0;
+        z-index: 3;
+        text-align: center;
+        font-size: 9px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: #777e93;
+        pointer-events: none;
+      }
+      .corner {
+        position: fixed;
+        bottom: 28px;
+        left: 42px;
+        font-family: var(--sans);
+        font-size: 14px;
+        font-style: normal;
+        line-height: 1.6;
+        color: #b2b3c4;
+        z-index: 3;
+      }
+      .cloud {
+        position: fixed;
+        width: 65vw;
+        height: 200px;
+        bottom: -130px;
+        border-radius: 50%;
+        background: #364461;
+        filter: blur(70px);
+        opacity: 0.25;
+        pointer-events: none;
+      }
+      .cloud.right {
+        right: -10vw;
+        bottom: -145px;
+        background: #675e70;
+      }
+      .cloud.left {
+        left: -20vw;
+      }
+
+      /* 7. TRẠNG THÁI MỞ THIỆP VÀ KHUNG LỜI CHÚC */
+      .opened .intro {
+        opacity: 0;
+        transform: scale(1.25);
+        pointer-events: none;
+      }
+      .opened .intro[hidden] {
+        display: none;
+      }
+      .opened .sky-glow {
+        opacity: 0.45;
+        transition: opacity 2s;
+      }
+      .world-ui {
+        position: fixed;
+        inset: 0;
+        z-index: 3;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 1.8s;
+      }
+      .opened .world-ui {
+        opacity: 1;
+      }
+      .dedication {
+        width: min(580px, 85vw);
+        text-align: center;
+        padding: 32px 25px 35px;
+        background: radial-gradient(ellipse, #080c1bf2 20%, #080c1b88 60%, transparent 73%);
+      }
+      .dedication .eyebrow {
+        font-size: 9px;
+        letter-spacing: 3px;
+      }
+      .dedication h2 {
+        font-family: var(--serif);
+        font-weight: 400;
+        font-size: clamp(36px, 6vw, 68px);
+        margin: 12px 0 20px;
+        line-height: 1.15;
+        overflow-wrap: anywhere;
+        text-shadow: 0 0 28px #e8bd8740;
+      }
+      .dedication h2 em {
+        color: var(--gold);
+        font-weight: 400;
+      }
+      .dedication p.message {
+        font-size: clamp(12px, 1.3vw, 14px);
+        line-height: 2;
+        white-space: pre-line;
+        color: #d4cddd;
+        margin: 0 auto;
+        max-width: 410px;
+        overflow-wrap: anywhere;
+      }
+      .dedication .signature {
+        font-family: var(--serif);
+        font-style: italic;
+        font-size: 16px;
+        margin: 20px 0 0;
+        color: var(--gold);
+        overflow-wrap: anywhere;
+      }
+      .world-controls {
+        position: absolute;
+        bottom: 65px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        pointer-events: auto;
+      }
+      .text-button {
+        border: 0;
+        background: none;
+        font-size: 10px;
+        letter-spacing: 0.8px;
+        color: #adaaba;
+        padding: 10px;
+      }
+      .text-button:hover {
+        color: var(--gold);
+      }
+      .world-hint {
+        position: absolute;
+        bottom: 115px;
+        font-size: 9px;
+        color: #818299;
+        letter-spacing: 1px;
+      }
+      .flash {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 5;
+        background: radial-gradient(circle, #ffe7b5bb, #e8cc8800 70%);
+        opacity: 0;
+      }
+      .flash.go {
+        animation: flash 1.5s ease-out;
+      }
+
+      /* 8. THÔNG BÁO NGẮN */
+      .toast {
+        position: fixed;
+        left: 50%;
+        bottom: 30px;
+        transform: translate(-50%, 15px);
+        background: #172033;
+        border: 1px solid #edce8e44;
+        border-radius: 40px;
+        padding: 13px 22px;
+        font-size: 11px;
+        text-align: center;
+        z-index: 12;
+        opacity: 0;
+        pointer-events: none;
+        transition: 0.3s;
+        width: max-content;
+        max-width: 90vw;
+      }
+      .toast.show {
+        opacity: 1;
+        transform: translate(-50%, 0);
+      }
+
+      /* 9. HOẠT ẢNH */
+      @keyframes sway {
+        0%,
+        100% {
+          transform: rotate(-6deg) translateY(0);
+        }
+        50% {
+          transform: rotate(7deg) translateY(-9px);
+        }
+      }
+      @keyframes breathe {
+        50% {
+          transform: scale(1.15);
+          opacity: 0.65;
+        }
+      }
+      @keyframes flash {
+        0% {
+          opacity: 0;
+        }
+        25% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0;
+        }
+      }
+
+      /* 10. BỐ CỤC ĐIỆN THOẠI VÀ MÀN HÌNH THẤP */
+      @media (min-height: 850px) {
+        .moon-scene {
+          margin-top: 30px;
+          margin-bottom: 12px;
+        }
+      }
+      @media (max-width: 600px) {
+        header {
+          padding: 22px 22px;
+        }
+        .brand {
+          font-size: 8px;
+          letter-spacing: 2px;
+          gap: 8px;
+        }
+        .brand svg {
+          width: 21px;
+        }
+        .icon-button {
+          width: 36px;
+          height: 36px;
+        }
+        .tools {
+          gap: 8px;
+        }
+        .intro {
+          padding-top: 85px;
+        }
+        .intro h1 {
+          font-size: 42px;
+          letter-spacing: -1px;
+        }
+        .eyebrow {
+          font-size: 8px;
+          letter-spacing: 3px;
+        }
+        .subtitle {
+          font-size: 11px;
+          max-width: 280px;
+        }
+        .moon-scene {
+          width: 310px;
+          height: 302px;
+          margin-top: 12px;
+        }
+        .moon-button {
+          width: 186px;
+          height: 186px;
+        }
+        .rabbit {
+          bottom: 4px;
+          left: 66px;
+          width: 82px;
+        }
+        .lantern.one {
+          right: 8px;
+        }
+        .corner {
+          display: none;
+        }
+        footer {
+          font-size: 8px;
+          letter-spacing: 1.5px;
+          bottom: 22px;
+        }
+        .dedication {
+          padding-inline: 12px;
+        }
+        .dedication p.message {
+          font-size: 12px;
+        }
+        .world-hint {
+          font-size: 8px;
+        }
+        .world-controls {
+          bottom: 58px;
+        }
+      }
+      @media (max-height: 700px) {
+        .intro {
+          padding-top: 75px;
+          padding-bottom: 45px;
+        }
+        .intro h1 {
+          font-size: 36px;
+        }
+        .subtitle {
+          margin-top: 10px;
+        }
+        .moon-scene {
+          height: 250px;
+          width: 285px;
+          margin: 3px 0;
+        }
+        .moon-button {
+          width: 165px;
+          height: 165px;
+        }
+        .rabbit {
+          width: 65px;
+          height: 80px;
+          bottom: 0;
+          left: 69px;
+        }
+        .orbit {
+          inset: 22px 43px;
+        }
+        .lantern.one {
+          height: 90px;
+          top: 15px;
+        }
+        .hold-label {
+          margin-top: 4px;
+        }
+        .eyebrow {
+          margin-bottom: 10px;
+        }
+        .world-hint {
+          bottom: 105px;
+        }
+      }
+
+      /* 11. TÔN TRỌNG TÙY CHỌN GIẢM CHUYỂN ĐỘNG */
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *:before {
+          animation: none !important;
+          transition: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- NỀN: Canvas vẽ sao và các lớp ánh sáng -->
+    <canvas id="sky" aria-hidden="true"></canvas>
+    <div class="sky-glow"></div>
+    <div class="cloud left"></div>
+    <div class="cloud right"></div>
+    <div class="grain"></div>
+    <!-- HÌNH VẼ DÙNG CHUNG: định nghĩa SVG thỏ và đèn lồng -->
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <defs>
+        <radialGradient id="moonFill" cx="36%" cy="30%">
+          <stop stop-color="#fff4d2" />
+          <stop offset=".65" stop-color="#ead29a" />
+          <stop offset="1" stop-color="#c7a566" />
+        </radialGradient>
+        <radialGradient id="lanternFill">
+          <stop stop-color="#ffe3a0" />
+          <stop offset=".6" stop-color="#ef9d50" />
+          <stop offset="1" stop-color="#af4934" />
+        </radialGradient>
+        <linearGradient id="fur" x2=".8" y2="1">
+          <stop stop-color="#fff7ed" />
+          <stop offset="1" stop-color="#d9c5c2" />
+        </linearGradient>
+        <symbol id="bunny" viewBox="0 0 100 120">
+          <ellipse cx="49" cy="87" rx="26" ry="25" fill="url(#fur)" />
+          <ellipse cx="69" cy="99" rx="17" ry="9" fill="#eee0d4" />
+          <circle cx="23" cy="89" r="10" fill="#fff4e8" />
+          <path d="M48 50Q23 5 36 3Q50 3 57 44" fill="url(#fur)" />
+          <path d="M59 44Q55 0 67 2Q80 5 68 48" fill="url(#fur)" />
+          <path d="M48 39Q34 8 38 12Q46 13 53 43" fill="#dba9a7" />
+          <path d="M62 39Q64 9 68 10Q72 15 66 42" fill="#dba9a7" />
+          <ellipse cx="60" cy="58" rx="23" ry="22" fill="url(#fur)" />
+          <circle cx="70" cy="53" r="2.4" fill="#43313d" />
+          <circle cx="71" cy="52" r=".7" fill="white" />
+          <ellipse cx="74" cy="62" rx="5" ry="3" fill="#e7b3b1" opacity=".7" />
+          <path d="M81 59l4 2-4 2" fill="#b78081" />
+          <ellipse cx="60" cy="83" rx="9" ry="15" transform="rotate(-30 60 83)" fill="#f2e4d9" />
+        </symbol>
+        <symbol id="lantern" viewBox="0 0 60 130">
+          <path d="M30 0v20" stroke="#ceaa69" stroke-width="1" />
+          <path d="M14 23Q4 47 11 78Q30 96 49 78Q56 47 46 23Z" fill="url(#lanternFill)" />
+          <ellipse cx="30" cy="24" rx="16" ry="5" fill="#a96236" />
+          <ellipse cx="30" cy="78" rx="19" ry="5" fill="#ffda8a" />
+          <path
+            d="M20 28q-7 25 0 48M30 29v47M40 28q7 25 0 48"
+            stroke="#ffd997"
+            stroke-width=".6"
+            fill="none"
+            opacity=".4"
+          />
+          <path d="M30 84v17m-4 0v18m4-18v22m4-22v18" stroke="#dcb270" stroke-width="1.2" />
+          <path d="M30 41l3 7 7 3-7 3-3 7-3-7-7-3 7-3Z" fill="#fff0be" opacity=".7" />
+        </symbol>
+      </defs>
+    </svg>
+    <!-- THANH TRÊN CÙNG: tên trang và công tắc nhạc -->
+    <header>
+      <div class="brand">
+        <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+          <path d="M23 5A12 12 0 1 0 27 23 11 11 0 0 1 23 5Z" stroke="#edce8e" stroke-width="1.3" />
+          <path d="M26 5v6m-3-3h6" stroke="#edce8e" /></svg
+        ><span>Trăng gửi lời thương</span>
+      </div>
+      <div class="tools">
+        <button
+          class="icon-button"
+          id="sound"
+          aria-label="Bật nhạc nền"
+          aria-pressed="false"
+          title="Bật / tắt nhạc nền"
+        >
+          <svg viewBox="0 0 24 24">
+            <path d="M9 18V5l11-2v13M9 8l11-2" />
+            <ellipse cx="6" cy="18" rx="3" ry="2" />
+            <ellipse cx="17" cy="16" rx="3" ry="2" />
+          </svg>
+        </button>
+      </div>
+    </header>
+    <main>
+      <!-- MÀN HÌNH MỞ ĐẦU: chỉnh tiêu đề và hướng dẫn tại đây -->
+      <section class="intro" id="intro" aria-labelledby="title">
+        <p class="eyebrow">Một món quà nhỏ · Một trời thương nhớ</p>
+        <h1 id="title">Một mùa trăng,<br />một lời <em>thương.</em></h1>
+        <p class="subtitle">Có một điều dịu dàng đang chờ bạn<br />ở phía bên kia ánh trăng.</p>
+        <div class="moon-scene">
+          <div class="orbit"></div>
+          <div class="orbit second"></div>
+          <svg class="lantern one" aria-hidden="true"><use href="#lantern" /></svg
+          ><svg class="lantern two" aria-hidden="true"><use href="#lantern" /></svg>
+          <button
+            id="moon"
+            class="moon-button"
+            aria-label="Mở thiệp Trung Thu. Nhấn giữ hoặc bấm Enter."
+            aria-describedby="hold-instruction"
+          >
+            <svg class="moon" viewBox="0 0 220 220" aria-hidden="true">
+              <defs>
+                <clipPath id="moonClip"><circle cx="110" cy="110" r="105" /></clipPath>
+                <filter id="texture">
+                  <feTurbulence type="fractalNoise" baseFrequency=".035" numOctaves="4" seed="7" />
+                  <feColorMatrix type="saturate" values="0" />
+                  <feComponentTransfer><feFuncA type="linear" slope=".24" /></feComponentTransfer>
+                  <feBlend in="SourceGraphic" mode="multiply" />
+                </filter>
+              </defs>
+              <circle cx="110" cy="110" r="105" fill="url(#moonFill)" />
+              <g clip-path="url(#moonClip)" fill="#9d875e" opacity=".17">
+                <path d="M21 55q29-29 44-13t-7 34 13 25-15 27-29-13-11-35Z" />
+                <path d="M119 33q29-10 33 10t34 30-2 39-26-18-25 3-9-31Z" />
+                <path d="M58 153q32-21 46 5t50 9-2 21-53 12-41-47" />
+                <circle cx="166" cy="148" r="17" />
+                <circle cx="75" cy="124" r="13" />
+              </g>
+              <circle
+                cx="110"
+                cy="110"
+                r="105"
+                fill="url(#moonFill)"
+                filter="url(#texture)"
+                clip-path="url(#moonClip)"
+                opacity=".6"
+              />
+              <circle
+                cx="110"
+                cy="110"
+                r="104.5"
+                fill="none"
+                stroke="#fff1c6"
+                stroke-opacity=".45"
+              /></svg
+            ><svg class="progress" viewBox="0 0 220 220" aria-hidden="true">
+              <circle id="progress" cx="110" cy="110" r="105" />
+            </svg>
+          </button>
+          <svg class="rabbit" aria-hidden="true"><use href="#bunny" /></svg
+          ><svg class="sprig" viewBox="0 0 170 85" fill="none" aria-hidden="true">
+            <path
+              d="M5 75Q66 70 151 12M54 61l8-34M88 42l31 7"
+              stroke="#bfa16a"
+              stroke-width="1.4"
+            />
+            <g fill="#b5a06b">
+              <ellipse cx="49" cy="61" rx="15" ry="5" transform="rotate(15 49 61)" />
+              <ellipse cx="70" cy="51" rx="15" ry="5" transform="rotate(-60 70 51)" />
+              <ellipse cx="94" cy="42" rx="14" ry="5" transform="rotate(12 94 42)" />
+              <ellipse cx="111" cy="30" rx="13" ry="5" transform="rotate(-70 111 30)" />
+              <ellipse cx="133" cy="25" rx="14" ry="4" transform="rotate(12 133 25)" />
+            </g>
+            <g fill="#efd79b">
+              <circle cx="62" cy="25" r="4" />
+              <circle cx="119" cy="49" r="3.5" />
+              <circle cx="149" cy="13" r="3" />
+            </g>
+          </svg>
+        </div>
+        <p class="hold-label" id="hold-instruction">
+          <span class="hold-dot"></span>Chạm và giữ mặt trăng để mở quà<small
+            >Một chút kiên nhẫn, một chút bất ngờ</small
+          >
+        </p>
+      </section>
+      <!-- MÀN HÌNH LỜI CHÚC: nội dung được JavaScript điền vào -->
+      <section class="world-ui" id="world" hidden aria-label="Lời chúc Trung Thu">
+        <div class="dedication">
+          <p class="eyebrow">Dưới cùng một vầng trăng</p>
+          <h2>Gửi <em id="recipient">bạn</em>,</h2>
+          <p class="message" id="message"></p>
+          <p class="signature" id="signature"></p>
+        </div>
+        <p class="world-hint">Di chuyển hoặc vuốt nhẹ để ngắm bầu trời</p>
+        <div class="world-controls">
+          <button class="text-button" id="replay">↶ &nbsp; Mở lại món quà</button>
+        </div>
+      </section>
+    </main>
+    <div class="flash" id="flash"></div>
+    <span class="corner">Rằm tháng Tám</span>
+    <footer>Gói chút ánh trăng · Gửi người thương mến</footer>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <!-- JAVASCRIPT: dữ liệu, hoạt ảnh, thao tác và âm thanh -->
+    <script>
+      (() => {
+        "use strict";
+
+        // 1. PHẦN TỬ GIAO DIỆN VÀ TÙY CHỌN CHUYỂN ĐỘNG
+        const $ = (id) => document.getElementById(id),
+          canvas = $("sky"),
+          ctx = canvas.getContext("2d");
+        const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+        // 2. DANH SÁCH LỜI CHÚC — thêm/sửa từng chuỗi; \n để xuống dòng.
+        const wishes = [
+          "Chúc bạn một mùa Trung Thu thật ấm áp.\nCó bánh ngon để ăn, có người thương để nhớ,\nvà có thật nhiều lý do để mỉm cười.",
+          "Trăng hôm nay tròn, mong niềm vui của bạn cũng thế.\nChúc những ngày sắp tới thật nhẹ nhàng,\nvà những điều bạn chờ mong sớm thành hiện thực.",
+          "Gửi bạn một chút ánh trăng và thật nhiều may mắn.\nMong bạn luôn khỏe mạnh, bình an\nvà được yêu thương theo cách mình xứng đáng.",
+          "Trung Thu này, chúc bạn bớt một chút lo âu,\nthêm một chút niềm vui,\nvà có một buổi tối thật dễ thương.",
+          "Mong mùa trăng này mang đến cho bạn\nmột cuộc gặp vui, một tin nhắn ấm lòng\nvà một kỷ niệm thật đẹp để giữ lại.",
+          "Chúc bạn luôn có một nơi để trở về,\nmột người sẵn lòng lắng nghe\nvà một mùa Trung Thu đầy tiếng cười.",
+          "Gửi bạn chiếc bánh ngọt bằng lời chúc này.\nMong cuộc sống đối xử với bạn thật dịu dàng,\nvà mỗi ngày đều có một niềm vui nhỏ.",
+          "Chúc bạn Trung Thu vui vẻ!\nĂn bánh không lo, ngắm trăng thật lâu,\nvà cười thật nhiều bên những người quý mến.",
+          "Dù hôm nay bạn đang ở đâu,\nmong ánh trăng cũng mang đến một chút bình yên.\nChúc bạn một đêm Trung Thu thật ấm lòng.",
+          "Mong mọi cố gắng thầm lặng của bạn\nsẽ nở thành những điều tốt đẹp.\nTrung Thu vui vẻ, người bạn đáng quý của tôi!",
+          "Chúc bạn có đủ can đảm để theo đuổi điều mình thích,\nđủ thảnh thơi để tận hưởng những điều nhỏ bé,\nvà đủ bánh Trung Thu để chia cho bạn bè.",
+          "Đêm nay, hãy dành cho mình một chút nghỉ ngơi nhé.\nNgắm trăng, ăn miếng bánh, uống ngụm trà.\nChúc bạn bình yên và thật nhiều niềm vui.",
+          "Một mùa trăng nữa lại đến.\nCảm ơn vì bạn đã là một phần trong những ngày vui.\nChúc tình bạn của chúng mình luôn ấm áp như thế.",
+          "Chúc túi bạn có tiền, lòng bạn có vui,\ncông việc thuận lợi, giấc ngủ thật ngon.\nVà Trung Thu này, có người chia bánh cùng bạn!",
+          "Mong bạn luôn giữ được sự hồn nhiên\nđể vui với một chiếc đèn lồng, một miếng bánh nhỏ.\nChúc bạn Trung Thu vui như ngày còn bé.",
+          "Gửi một lời chúc đến người đang đọc thiệp này:\nbạn xứng đáng với những điều tốt đẹp.\nMong mùa trăng này sẽ mang chúng đến gần hơn.",
+          "Chúc bạn một mùa Trung Thu đoàn viên.\nNhững người bạn thương đều mạnh khỏe,\nnhững nơi bạn đến đều có điều đáng nhớ.",
+          "Nếu hôm nay hơi mệt, mong tấm thiệp nhỏ này\nsẽ làm bạn mỉm cười một chút.\nChúc bạn một đêm trăng nhẹ lòng và ngủ ngon.",
+          "Trăng tròn rồi sẽ lại tròn,\nmong chúng mình vẫn còn nhiều dịp gặp nhau.\nTrung Thu vui vẻ nhé, người bạn của tôi!",
+          "Chúc những dự định của bạn từng bước thành hiện thực.\nTrong lúc cố gắng, đừng quên vui sống nhé.\nChúc bạn một mùa Trung Thu thật nhiều may mắn!",
+        ];
+
+        // 3. NỘI DUNG THIỆP — chọn một lời chúc cho mỗi lần tải trang.
+        const card = {
+          name: "bạn",
+          message: wishes[Math.floor(Math.random() * wishes.length)],
+          from: "Một người bạn gửi thương mến",
+        };
+
+        // 4. TRẠNG THÁI HOẠT ẢNH VÀ KÍCH THƯỚC CANVAS
+        let width = innerWidth,
+          height = innerHeight,
+          dpr = Math.min(devicePixelRatio || 1, 2),
+          opened = false,
+          openingAt = 0,
+          stars = [],
+          items = [],
+          last = 0,
+          holdAt = 0,
+          holding = false,
+          yaw = 0,
+          pitch = 0,
+          targetYaw = 0,
+          targetPitch = 0,
+          toastTimer,
+          transitionTimer;
+        const rand = (a, b) => a + Math.random() * (b - a);
+        function resize() {
+          width = innerWidth;
+          height = innerHeight;
+          dpr = Math.min(devicePixelRatio || 1, 2);
+          canvas.width = width * dpr;
+          canvas.height = height * dpr;
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          stars = Array.from(
+            { length: Math.min(260, Math.floor((width * height) / 4000)) },
+            () => ({
+              x: Math.random() * width,
+              y: Math.random() * height,
+              r: rand(0.4, 1.4),
+              phase: rand(0, 7),
+              speed: rand(0.3, 1),
+            }),
+          );
+        }
+        addEventListener("resize", resize);
+        resize();
+
+        // 5. HIỂN THỊ LỜI CHÚC VÀ TẠO CÁC VẬT THỂ BAY
+        function updateCard() {
+          $("recipient").textContent = card.name || "bạn";
+          $("message").textContent = card.message;
+          $("signature").textContent = card.from ? "— " + card.from : "";
+          document.title = "Gửi " + (card.name || "bạn") + " · Một mùa trăng, một lời thương";
+          makeItems();
+        }
+        function makeItems() {
+          const n = card.name || "bạn";
+          const phrases = [
+            `Chúc ${n} mùa Trung Thu ấm áp`,
+            `Một mùa trăng thật dịu dàng`,
+            `Mong ${n} luôn vui và hạnh phúc`,
+            `Trăng tròn, yêu thương trọn vẹn`,
+            `Chúc ${n} bình an và may mắn`,
+            `Trung Thu vui vẻ, cười thật nhiều nhé`,
+            `Bánh ngọt, trà thơm, bạn bè sum vầy`,
+            `Mong mọi điều tốt đẹp đến với ${n}`,
+            `Đêm trăng sáng, lòng đầy niềm vui`,
+            `Chúc ${n} luôn khỏe mạnh và an nhiên`,
+            `Giữ mãi những nụ cười trong veo`,
+            `Mùa đoàn viên, trọn vẹn tiếng cười`,
+          ];
+          items = Array.from({ length: 48 }, (_, i) => ({
+            x: rand(-width * 1.1, width * 1.1),
+            y: rand(-height, height),
+            z: rand(150, 1900),
+            type: i % 7 === 0 ? "rabbit" : i % 5 === 0 ? "lantern" : "text",
+            text: phrases[i % phrases.length],
+            tone: i % 3,
+            phase: rand(0, Math.PI * 2),
+          }));
+        }
+
+        // Chỉ đọc SVG cố định của trang; không chèn dữ liệu người dùng vào SVG.
+        const sprites = {};
+        for (const kind of ["rabbit", "lantern"]) {
+          const symbol = kind === "rabbit" ? "bunny" : "lantern";
+          const content = document.querySelector("svg defs").innerHTML;
+          const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="130" viewBox="0 0 100 130"><defs>${content}</defs><use href="#${symbol}" width="100" height="130"/></svg>`;
+          const img = new Image();
+          img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+          sprites[kind] = img;
+        }
+
+        // 6. VÒNG LẶP VẼ: sao, tiến trình nhấn giữ và hiệu ứng chiều sâu
+        function draw(time) {
+          const dt = last ? Math.min((time - last) / 1000, 0.05) : 0;
+          last = time;
+          const t = reduced ? 0 : time / 1000;
+          ctx.clearRect(0, 0, width, height);
+          yaw += (targetYaw - yaw) * 0.035;
+          pitch += (targetPitch - pitch) * 0.035;
+          for (const s of stars) {
+            const alpha = 0.28 + (Math.sin(t * s.speed + s.phase) + 1) * 0.24;
+            ctx.fillStyle = `rgba(245,233,205,${alpha})`;
+            ctx.beginPath();
+            ctx.arc(s.x + yaw * 4, s.y + pitch * 4, s.r, 0, Math.PI * 2);
+            ctx.fill();
+            if (s.r > 1.2) {
+              ctx.globalAlpha = alpha * 0.5;
+              ctx.fillRect(s.x - 3, s.y - 0.35, 6, 0.7);
+              ctx.fillRect(s.x - 0.35, s.y - 3, 0.7, 6);
+              ctx.globalAlpha = 1;
+            }
+          }
+          if (holding) {
+            const progress = Math.min((time - holdAt) / 1150, 1);
+            $("progress").style.strokeDashoffset = 660 * (1 - progress);
+            if (progress === 1) {
+              endHold();
+              openCard();
+            }
+          }
+          if (opened) {
+            const fade = reduced ? 1 : Math.min((time - openingAt) / 1800, 1);
+            const focal = Math.min(width, height) * 0.8;
+            for (const item of [...items].sort((a, b) => b.z - a.z)) {
+              if (!reduced) {
+                item.z -= dt * 42;
+                if (item.z < 90) {
+                  item.z = 1900;
+                  item.x = rand(-width * 1.1, width * 1.1);
+                  item.y = rand(-height, height);
+                }
+              }
+              const scale = focal / item.z;
+              const x = width / 2 + (item.x + yaw * 110) * scale;
+              const y =
+                height / 2 + (item.y + pitch * 110 + Math.sin(t * 0.3 + item.phase) * 16) * scale;
+              if (x < -500 || x > width + 500 || y < -150 || y > height + 150) continue;
+              let alpha =
+                Math.min(1, (1900 - item.z) / 240) * Math.min(1, (item.z - 90) / 180) * fade;
+              const central =
+                Math.abs(x - width / 2) < Math.min(width * 0.4, 280) &&
+                Math.abs(y - height / 2) < 175;
+              alpha *= central ? 0.14 : 0.76;
+              ctx.globalAlpha = alpha;
+              if (item.type === "text") {
+                const size = Math.max(8, Math.min(35, 20 * scale));
+                ctx.font = `300 ${size}px "Segoe UI", Arial, sans-serif`;
+                ctx.textAlign = "center";
+                ctx.fillStyle = ["#eebbd6", "#c0dcdf", "#eed9b0"][item.tone];
+                ctx.shadowColor = ctx.fillStyle;
+                ctx.shadowBlur = reduced ? 0 : 9;
+                ctx.fillText(item.text, x, y);
+                ctx.shadowBlur = 0;
+              } else {
+                const img = sprites[item.type];
+                if (img.complete && img.naturalWidth) {
+                  const w = Math.min(110, 64 * scale);
+                  ctx.drawImage(img, x - w / 2, y - w * 0.65, w, w * 1.3);
+                }
+              }
+            }
+            ctx.globalAlpha = 1;
+          }
+          requestAnimationFrame(draw);
+        }
+
+        // 7. MỞ / ĐÓNG THIỆP VÀ XỬ LÝ NHẤN GIỮ
+        function startHold(e) {
+          if (opened || (e.pointerType === "mouse" && e.button !== 0)) return;
+          holding = true;
+          holdAt = performance.now();
+          $("moon").classList.add("holding");
+          $("moon").setPointerCapture?.(e.pointerId);
+        }
+        function endHold() {
+          holding = false;
+          $("moon").classList.remove("holding");
+          $("progress").style.strokeDashoffset = 660;
+        }
+        function openCard() {
+          if (opened) return;
+          opened = true;
+          openingAt = performance.now();
+          $("world").hidden = false;
+          document.body.classList.add("opened");
+          $("intro").inert = true;
+          $("flash").classList.remove("go");
+          void $("flash").offsetWidth;
+          $("flash").classList.add("go");
+          transitionTimer = setTimeout(() => {
+            $("intro").hidden = true;
+          }, 1400);
+          $("replay").focus({ preventScroll: true });
+        }
+        function replay() {
+          clearTimeout(transitionTimer);
+          endHold();
+          opened = false;
+          $("intro").hidden = false;
+          $("intro").inert = false;
+          document.body.classList.remove("opened");
+          $("world").hidden = true;
+          targetYaw = targetPitch = 0;
+          $("moon").focus({ preventScroll: true });
+        }
+        $("moon").addEventListener("pointerdown", startHold);
+        for (const event of ["pointerup", "pointercancel", "lostpointercapture"])
+          $("moon").addEventListener(event, endHold);
+        $("moon").addEventListener("contextmenu", (e) => e.preventDefault());
+        $("moon").addEventListener("click", (e) => {
+          if (e.detail === 0) openCard();
+        });
+        $("replay").onclick = replay;
+        addEventListener("pointermove", (e) => {
+          targetYaw = (e.clientX / width - 0.5) * 1.5;
+          targetPitch = (e.clientY / height - 0.5) * 1.2;
+        });
+
+        // 8. THÔNG BÁO NGẮN TRÊN GIAO DIỆN
+        function toast(s) {
+          $("toast").textContent = s;
+          $("toast").classList.add("show");
+          clearTimeout(toastTimer);
+          toastTimer = setTimeout(() => $("toast").classList.remove("show"), 3500);
+        }
+
+        // 9. NHẠC NỀN — tự thử phát; giữ quyền bật/tắt của người xem.
+        let audioCtx,
+          master,
+          musicOn = false,
+          wantsSound = true,
+          musicTimer;
+        const activeNotes = new Set();
+        const melody = [0, 7, 12, 4, 9, 7, 4, 2, 0, 4, 7, 12, 9, 4, 2, 7];
+        function stopNotes() {
+          clearTimeout(musicTimer);
+          for (const note of activeNotes) {
+            try {
+              note.stop();
+            } catch {}
+          }
+          activeNotes.clear();
+        }
+        function scheduleMusic() {
+          if (!musicOn) return;
+          const now = audioCtx.currentTime;
+          melody.forEach((step, i) => {
+            const osc = audioCtx.createOscillator(),
+              gain = audioCtx.createGain();
+            osc.type = "sine";
+            osc.frequency.value = 261.6256 * Math.pow(2, step / 12);
+            const at = now + i * 0.65;
+            gain.gain.setValueAtTime(0, at);
+            gain.gain.linearRampToValueAtTime(0.12, at + 0.025);
+            gain.gain.exponentialRampToValueAtTime(0.001, at + 2);
+            osc.connect(gain);
+            gain.connect(master);
+            activeNotes.add(osc);
+            osc.onended = () => {
+              activeNotes.delete(osc);
+              osc.disconnect();
+              gain.disconnect();
+            };
+            osc.start(at);
+            osc.stop(at + 2.1);
+          });
+          musicTimer = setTimeout(scheduleMusic, melody.length * 650);
+        }
+        function syncAudio() {
+          const running = Boolean(wantsSound && audioCtx && audioCtx.state === "running");
+          if (running !== musicOn) {
+            musicOn = running;
+            if (musicOn) scheduleMusic();
+            else stopNotes();
+          }
+          $("sound").setAttribute("aria-pressed", String(musicOn));
+          $("sound").setAttribute("aria-label", musicOn ? "Tắt nhạc nền" : "Bật nhạc nền");
+          $("sound").title = musicOn ? "Tắt nhạc nền" : "Bật nhạc nền";
+          if (!wantsSound && audioCtx?.state === "running") audioCtx.suspend().catch(() => {});
+        }
+        function tryStartMusic(showError = false) {
+          if (!wantsSound) return;
+          try {
+            if (!audioCtx) {
+              const Audio = window.AudioContext || window.webkitAudioContext;
+              if (!Audio) throw new Error("Audio unavailable");
+              audioCtx = new Audio();
+              master = audioCtx.createGain();
+              master.gain.value = 0.33;
+              master.connect(audioCtx.destination);
+              audioCtx.addEventListener("statechange", syncAudio);
+            }
+            syncAudio();
+            // Trình duyệt có thể giữ yêu cầu tự phát ở trạng thái chờ.
+            // Thử resume lại ngay trong lần chạm đầu tiên, không chờ yêu cầu cũ.
+            if (audioCtx.state !== "running")
+              audioCtx
+                .resume()
+                .then(syncAudio)
+                .catch(() => {
+                  if (showError) toast("Chạm lại nút nhạc để bắt đầu phát.");
+                });
+          } catch {
+            if (showError) toast("Trình duyệt này chưa hỗ trợ phát nhạc nền.");
+          }
+        }
+        $("sound").onclick = () => {
+          if (musicOn) {
+            wantsSound = false;
+            syncAudio();
+          } else {
+            wantsSound = true;
+            tryStartMusic(true);
+          }
+        };
+        function unlockMusic(event) {
+          if (event.target instanceof Element && event.target.closest("#sound")) return;
+          if (wantsSound && !musicOn) tryStartMusic();
+        }
+
+        // 10. KHỞI ĐỘNG VÀ SỰ KIỆN TOÀN TRANG
+        document.addEventListener("pointerdown", unlockMusic, { passive: true });
+        document.addEventListener("keydown", unlockMusic);
+        tryStartMusic();
+        document.addEventListener("visibilitychange", () => {
+          last = 0;
+          if (document.hidden) endHold();
+        });
+        updateCard();
+        requestAnimationFrame(draw);
+      })();
+    </script>
+  </body>
+</html>
